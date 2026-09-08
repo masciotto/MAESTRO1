@@ -95,9 +95,12 @@ function updateContentInput() {
 
     if (type === "ar") {
         contentInputArea.innerHTML = `
-            <label>Modello 3D USDZ</label>
-            <input id="content-file" type="file" accept=".usdz" required>
-            <small>Seleziona un modello 3D USDZ</small>
+            <label>Modello 3D (USDZ o GLB)</label>
+            <input id="content-file" type="file" accept=".usdz,.glb,.gltf" required>
+            <small>
+                • <strong>USDZ</strong> → migliore su iPhone<br>
+                • <strong>GLB</strong> → funziona su Android e nel browser
+            </small>
         `;
         return;
     }
@@ -614,15 +617,39 @@ function renderContent(content) {
 
     if (content.type === "ar") {
         const url = absoluteUrl(content.content_url);
+        const isUsdz = url.toLowerCase().endsWith(".usdz");
+
         return `
             <h2>${title}</h2>
             <p style="opacity:0.7">di ${nick}</p>
             ${description ? `<p>${description}</p>` : ""}
-            <div class="ar-placeholder">
-                <div class="ar-icon">◇</div>
-                <h3>Modello 3D</h3>
-                <p>Il modello USDZ è pronto.</p>
-                <a class="ar-button" href="${url}" rel="ar">Visualizza in AR</a>
+
+            <div style="margin-top:20px;">
+                <model-viewer
+                    src="${url}"
+                    alt="${title}"
+                    auto-rotate
+                    camera-controls
+                    ar
+                    ar-modes="webxr scene-viewer quick-look"
+                    style="width:100%; height:360px; background:#111; border-radius:12px;"
+                >
+                    <div slot="poster" style="color:white; text-align:center; padding-top:140px;">
+                        Caricamento modello 3D...
+                    </div>
+                </model-viewer>
+            </div>
+
+            <div style="margin-top:18px; text-align:center;">
+                ${isUsdz ? `
+                    <a class="ar-button" href="${url}" rel="ar" style="display:inline-block; margin:6px;">
+                        Apri in AR (iPhone)
+                    </a>
+                ` : ""}
+                <p style="margin-top:12px; font-size:13px; opacity:0.7;">
+                    Su Android usa il pulsante AR del visualizzatore 3D.<br>
+                    Su iPhone puoi usare anche il pulsante dedicato.
+                </p>
             </div>
         `;
     }

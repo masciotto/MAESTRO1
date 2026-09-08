@@ -87,7 +87,10 @@ const allowedMimeTypes = {
 
     ar: [
         "model/vnd.usdz+zip",
-        "application/octet-stream"
+        "model/gltf-binary",
+        "model/gltf+json",
+        "application/octet-stream",
+        "application/gltf-buffer"
     ],
 
     image: [
