@@ -179,16 +179,36 @@ async function createContent(event) {
                 throw new Error("Il file supera il limite di 100 MB.");
             }
 
-            showPublishStatus("Caricamento del file...");
+            showPublishStatus("Caricamento del file in corso... (può richiedere tempo)");
 
             const formData = new FormData();
             formData.append("type", type);
             formData.append("file", file);
 
-            const uploadResponse = await fetch(`${API_URL}/api/upload`, {
-                method: "POST",
-                body: formData
-            });
+            // Timeout più lungo per file grandi
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minuti
+
+            let uploadResponse;
+            try {
+                uploadResponse = await fetch(`${API_URL}/api/upload`, {
+                    method: "POST",
+                    body: formData,
+                    signal: controller.signal
+                });
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name === "AbortError") {
+                    throw new Error("Timeout: il file è troppo grande o la connessione è lenta. Prova con un file sotto i 6 MB.");
+                }
+                throw new Error("Errore di rete durante l'upload. Riprova o usa un file più piccolo.");
+            }
+            clearTimeout(timeoutId);
+
+            const contentType = uploadResponse.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+                throw new Error("Il server non ha risposto correttamente. Il file potrebbe essere troppo grande per il piano gratuito.");
+            }
 
             const uploadData = await uploadResponse.json();
 
