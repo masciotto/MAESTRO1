@@ -750,6 +750,87 @@ function addViewerStyles() {
     document.head.appendChild(style);
 }
 
+
+// ==========================================
+// RICERCA LUOGO (Nominatim)
+// ==========================================
+const searchInput = document.getElementById("place-search");
+const searchBtn = document.getElementById("search-btn");
+const searchResults = document.getElementById("search-results");
+
+if (searchBtn) {
+    searchBtn.addEventListener("click", searchPlace);
+}
+
+if (searchInput) {
+    searchInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            searchPlace();
+        }
+    });
+}
+
+async function searchPlace() {
+    const query = searchInput.value.trim();
+    if (!query) return;
+
+    searchResults.innerHTML = `<p style="opacity:0.7;">Ricerca in corso...</p>`;
+
+    try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+        
+        const response = await fetch(url, {
+            headers: {
+                "Accept-Language": "it"
+            }
+        });
+        
+        const results = await response.json();
+
+        if (!results.length) {
+            searchResults.innerHTML = `<p style="opacity:0.7;">Nessun risultato trovato.</p>`;
+            return;
+        }
+
+        searchResults.innerHTML = results.map((r, i) => `
+            <div 
+                class="search-result-item"
+                style="padding:10px; margin-bottom:6px; background:#1a1a1a; border-radius:8px; cursor:pointer; border:1px solid #333;"
+                onclick="goToSearchResult(${r.lat}, ${r.lon}, '${escapeHtml(r.display_name).replace(/'/g, "\'")}')"
+            >
+                <strong style="font-size:14px;">${escapeHtml(r.display_name)}</strong>
+            </div>
+        `).join("");
+
+    } catch (err) {
+        console.error(err);
+        searchResults.innerHTML = `<p style="color:#ff6b6b;">Errore durante la ricerca.</p>`;
+    }
+}
+
+function goToSearchResult(lat, lon, name) {
+    map.setView([lat, lon], 17);
+    
+    // Marker temporaneo del risultato
+    if (window.searchMarker) {
+        map.removeLayer(window.searchMarker);
+    }
+    
+    window.searchMarker = L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup(name)
+        .openPopup();
+
+    // Imposta anche come punto selezionato per creare contenuto
+    selectedLocation = { lat: parseFloat(lat), lng: parseFloat(lon) };
+    selectedLocationElementUpdate(parseFloat(lat), parseFloat(lon));
+
+    searchResults.innerHTML = "";
+    searchInput.value = "";
+}
+
+
 // ==========================================
 // INIZIALIZZAZIONE
 // ==========================================

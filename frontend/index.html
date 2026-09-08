@@ -164,6 +164,25 @@
         </form>
     </section>
 
+    <!-- RICERCA LUOGO -->
+    <section class="search-section" style="margin: 15px 0;">
+        <div style="display:flex; gap:8px;">
+            <input 
+                id="place-search" 
+                type="text" 
+                placeholder="Cerca via, piazza, luogo..." 
+                style="flex:1; padding:12px; border-radius:8px; border:1px solid #333; background:#1a1a1a; color:white;"
+            >
+            <button 
+                id="search-btn"
+                style="padding:12px 18px; background:#2a5a8a; color:white; border:none; border-radius:8px; cursor:pointer;"
+            >
+                Cerca
+            </button>
+        </div>
+        <div id="search-results" style="margin-top:8px;"></div>
+    </section>
+
     <!-- MAPPA -->
     <section id="map"></section>
 
