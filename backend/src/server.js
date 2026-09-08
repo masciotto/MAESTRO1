@@ -10,21 +10,25 @@ const uploadRouter = require("./routes/upload");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Percorsi robusti
+const frontendPath = path.join(__dirname, "../../frontend");
+const uploadsPath = path.join(__dirname, "../uploads");
+
 app.use(cors());
 app.use(express.json());
 
-// Frontend statico
-app.use(express.static(path.join(__dirname, "../../frontend")));
+// Frontend
+app.use(express.static(frontendPath));
 
 // File caricati
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", express.static(uploadsPath));
 
 // API
 app.use("/api/artworks", artworksRouter);
 app.use("/api/contents", contentsRouter);
 app.use("/api/upload", uploadRouter);
 
-// Health check
+// Health
 app.get("/api/health", (req, res) => {
     res.json({
         status: "ok",
@@ -33,11 +37,11 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-// Root
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "../../frontend/index.html"));
+// Fallback per SPA
+app.get("*", (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`MAESTRO backend running on port ${PORT}`);
+    console.log(`MAESTRO running on port ${PORT}`);
 });
