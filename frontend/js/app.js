@@ -411,18 +411,39 @@ function renderContentList(contents) {
         const card = document.createElement("div");
         card.className = "content-card";
         card.style.cursor = "pointer";
-        card.style.padding = "12px";
-        card.style.marginBottom = "8px";
+        card.style.padding = "14px";
+        card.style.marginBottom = "10px";
         card.style.background = "#1a1a1a";
-        card.style.borderRadius = "8px";
+        card.style.borderRadius = "10px";
+        card.style.border = "1px solid #2a2a2a";
 
-        const distanceText = content.distance_meters !== undefined
-            ? ` · ${content.distance_meters} m`
-            : "";
+        // Calcola se è sbloccato
+        let statusIcon = "🔒";
+        let statusText = "Bloccato";
+        let distanceText = "";
+
+        if (content.distance_meters !== undefined) {
+            distanceText = `${content.distance_meters} m`;
+            const radius = content.activation_radius || 80;
+            if (content.distance_meters <= radius) {
+                statusIcon = "🔓";
+                statusText = "Sbloccato";
+            }
+        } else {
+            distanceText = "—";
+        }
 
         card.innerHTML = `
-            <strong>${getContentIcon(content.type)} ${escapeHtml(content.title)}</strong><br>
-            <small>${escapeHtml(content.type)} · ${escapeHtml(content.nickname || "Anonimo")}${distanceText}</small>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <strong style="font-size:15px;">${getContentIcon(content.type)} ${escapeHtml(content.title)}</strong><br>
+                    <small style="opacity:0.75;">${escapeHtml(content.nickname || "Anonimo")} · ${escapeHtml(content.type)}</small>
+                </div>
+                <div style="text-align:right;font-size:13px;">
+                    <div>${statusIcon} ${statusText}</div>
+                    <div style="opacity:0.7;margin-top:3px;">${distanceText}</div>
+                </div>
+            </div>
         `;
 
         card.addEventListener("click", function () {
@@ -734,6 +755,22 @@ function addViewerStyles() {
 // ==========================================
 updateContentInput();
 loadContents();
+
+// Ripristina nickname salvato
+const savedNick = localStorage.getItem("maestro_nickname");
+if (savedNick) {
+    const nickInput = document.getElementById("content-nickname");
+    if (nickInput) nickInput.value = savedNick;
+}
+
+// Salva nickname quando cambia
+const nickInput = document.getElementById("content-nickname");
+if (nickInput) {
+    nickInput.addEventListener("change", function() {
+        const val = this.value.trim();
+        if (val) localStorage.setItem("maestro_nickname", val);
+    });
+}
 
 document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closeContentViewer();
