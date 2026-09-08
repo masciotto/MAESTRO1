@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0b0b">
+    <title>MAESTRO</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        /* Fix mappa - altezza obbligatoria */
+        #map {
+            height: 420px;
+            width: 100%;
+            z-index: 1;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .create-section {
+            background: #111;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="url"],
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .form-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        #publish-button {
+            width: 100%;
+            padding: 14px;
+            background: #2a7a3a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #publish-button:hover {
+            background: #339944;
+        }
+
+        #publish-status {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        #publish-status.error {
+            background: #4a1a1a;
+            color: #ff6b6b;
+        }
+
+        #selected-location {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div>
+        <h1>MAESTRO</h1>
+        <span>Virtual Art in the Real World</span>
+    </div>
+    <div id="gps-status">GPS: non attivo</div>
+</header>
+
+<main>
+    <section class="controls">
+        <button id="locate-btn">📍 Trova la mia posizione</button>
+        <div id="location-info">Posizione non ancora rilevata</div>
+    </section>
+
+    <!-- CREAZIONE CONTENUTO -->
+    <section class="create-section">
+        <div class="section-header">
+            <h2>Crea un nuovo contenuto</h2>
+            <span>Clicca sulla mappa per scegliere il punto</span>
+        </div>
+
+        <div id="selected-location">
+            Nessun punto selezionato.
+        </div>
+
+        <form id="content-form">
+            <div class="form-group">
+                <label for="content-title">Titolo</label>
+                <input id="content-title" type="text" placeholder="Nome del contenuto" required>
+            </div>
+
+            <div class="form-group">
+                <label for="content-description">Descrizione</label>
+                <textarea id="content-description" placeholder="Descrizione" rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="content-nickname">Il tuo nickname</label>
+                <input id="content-nickname" type="text" placeholder="Es. LunaRossa" maxlength="30">
+            </div>
+
+            <div class="form-group">
+                <label for="content-type">Tipo di contenuto</label>
+                <select id="content-type">
+                    <option value="text">Testo</option>
+                    <option value="poetry">Poesia</option>
+                    <option value="image">Immagine</option>
+                    <option value="video">Video</option>
+                    <option value="pdf">PDF</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="link">Link</option>
+                    <option value="ar">AR / 3D (USDZ)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="content-input-area"></div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="content-map-visible" checked>
+                    Mostra questo contenuto sulla mappa
+                </label>
+                <small style="display:block;margin-top:4px;opacity:0.7">
+                    Se disattivato, il contenuto resta nascosto e appare solo quando sei fisicamente vicino.
+                </small>
+            </div>
+
+            <button type="submit" id="publish-button">PUBBLICA CONTENUTO</button>
+            <div id="publish-status"></div>
+        </form>
+    </section>
+
+    <!-- MAPPA -->
+    <section id="map"></section>
+
+    <!-- LISTA VICINANZE -->
+    <section class="artworks-section">
+        <div class="section-header">
+            <h2>Contenuti nelle vicinanze</h2>
+            <span id="artwork-count"></span>
+        </div>
+        <div id="artworks-list">
+            <p>Attiva la posizione per esplorare MAESTRO.</p>
+        </div>
+    </section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+}
+
+header {
+    padding: 25px 20px;
+    text-align: center;
+    border-bottom: 1px solid #333;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 34px;
+    letter-spacing: 5px;
+}
+
+header p { color: #aaa; }
+
+main {
+    max-width: 600px;
+    margin: auto;
+    padding: 25px 20px;
+}
+
+.location {
+    padding: 22px;
+    border: 1px solid #333;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.location h2 { margin-top: 0; }
+
+button, .ar-btn {
+    width: 100%;
+    padding: 16px;
+    margin-top: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#locationButton {
+    background: white;
+    color: black;
+}
+
+.ar-btn {
+    background: #00ff9d;
+    color: black;
+    font-size: 18px;
+}
+
+button:active, .ar-btn:active {
+    transform: scale(0.97);
+}
+
+#status {
+    margin-top: 15px;
+    color: #aaa;
+}
+
+#map {
+    height: 420px;
+    width: 100%;
+    border-radius: 15px;
+    border: 1px solid #333;
+}
+
+.opera-marker {
+    font-size: 34px;
+    text-align: center;
+    line-height: 42px;
+}
+
