@@ -2,55 +2,137 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0b0b0b">
     <title>MAESTRO</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="css/style.css">
 
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+
     <style>
-        /* Fix mappa - altezza obbligatoria */
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0b0b0b;
+            color: #eee;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #111;
+            border-bottom: 1px solid #222;
+        }
+        .topbar h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+        }
+        .topbar span {
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        #gps-banner {
+            background: #1a2a3a;
+            padding: 14px 16px;
+            text-align: center;
+            border-bottom: 1px solid #2a3a4a;
+        }
+        #gps-banner.hidden { display: none; }
+        #gps-banner button {
+            margin-top: 8px;
+            padding: 10px 20px;
+            background: #2a7a3a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
         #map {
-            height: 420px;
+            height: 55vh;
             width: 100%;
             z-index: 1;
-            border-radius: 12px;
-            margin: 20px 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 12px;
+        }
+        .section-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        #artworks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .content-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 14px;
+            cursor: pointer;
+        }
+
+        .create-toggle {
+            width: 100%;
+            padding: 14px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 10px;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            margin-bottom: 12px;
         }
 
         .create-section {
+            display: none;
             background: #111;
-            padding: 20px;
+            padding: 16px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            border: 1px solid #222;
+        }
+        .create-section.open {
+            display: block;
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
-
         .form-group label {
             display: block;
             margin-bottom: 6px;
-            font-weight: 500;
+            font-size: 0.9rem;
+            opacity: 0.85;
         }
-
         .form-group input[type="text"],
         .form-group input[type="url"],
         .form-group textarea,
         .form-group select {
             width: 100%;
-            padding: 10px;
+            padding: 11px;
             border-radius: 8px;
             border: 1px solid #333;
             background: #1a1a1a;
             color: white;
-            box-sizing: border-box;
-        }
-
-        .form-group input[type="checkbox"] {
-            margin-right: 8px;
         }
 
         #publish-button {
@@ -62,19 +144,15 @@
             border-radius: 8px;
             font-size: 16px;
             cursor: pointer;
-            margin-top: 10px;
-        }
-
-        #publish-button:hover {
-            background: #339944;
+            margin-top: 8px;
         }
 
         #publish-status {
             margin-top: 12px;
             padding: 10px;
             border-radius: 6px;
+            text-align: center;
         }
-
         #publish-status.error {
             background: #4a1a1a;
             color: #ff6b6b;
@@ -84,118 +162,119 @@
             background: #1a1a1a;
             padding: 12px;
             border-radius: 8px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             font-size: 14px;
         }
+
+        .search-section {
+            padding: 10px 16px;
+            background: #111;
+        }
+        .search-section input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: white;
+        }
     </style>
-    <!-- Model Viewer per AR / 3D -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 <body>
 
 <header class="topbar">
     <div>
         <h1>MAESTRO</h1>
-        <span>Virtual Art in the Real World</span>
+        <span>Il livello digitale del mondo reale</span>
     </div>
-    <div id="gps-status">GPS: non attivo</div>
+    <div id="gps-status" style="font-size:0.8rem; opacity:0.7;">GPS: off</div>
 </header>
 
+<!-- BANNER GPS -->
+<div id="gps-banner">
+    <div style="font-size:15px; margin-bottom:4px;">
+        Per vedere i contenuti vicino a te e sbloccarli, attiva la posizione
+    </div>
+    <button id="locate-btn">📍 Attiva la mia posizione</button>
+</div>
+
+<!-- RICERCA -->
+<div class="search-section">
+    <input id="place-search" type="text" placeholder="Cerca via, piazza, luogo...">
+</div>
+
+<!-- MAPPA (elemento principale) -->
+<div id="map"></div>
+
 <main>
-    <section class="controls">
-        <button id="locate-btn">📍 Trova la mia posizione</button>
-        <div id="location-info">Posizione non ancora rilevata</div>
-    </section>
-
-    <!-- CREAZIONE CONTENUTO -->
-    <section class="create-section">
-        <div class="section-header">
-            <h2>Crea un nuovo contenuto</h2>
-            <span>Clicca sulla mappa per scegliere il punto</span>
-        </div>
-
-        <div id="selected-location">
-            Nessun punto selezionato.
-        </div>
-
-        <form id="content-form">
-            <div class="form-group">
-                <label for="content-title">Titolo</label>
-                <input id="content-title" type="text" placeholder="Nome del contenuto" required>
-            </div>
-
-            <div class="form-group">
-                <label for="content-description">Descrizione</label>
-                <textarea id="content-description" placeholder="Descrizione" rows="2"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="content-nickname">Il tuo nickname</label>
-                <input id="content-nickname" type="text" placeholder="Es. LunaRossa" maxlength="30">
-            </div>
-
-            <div class="form-group">
-                <label for="content-type">Tipo di contenuto</label>
-                <select id="content-type">
-                    <option value="text">Testo</option>
-                    <option value="poetry">Poesia</option>
-                    <option value="image">Immagine</option>
-                    <option value="video">Video</option>
-                    <option value="pdf">PDF</option>
-                    <option value="youtube">YouTube</option>
-                    <option value="link">Link</option>
-                    <option value="ar">AR / 3D (USDZ)</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="content-input-area"></div>
-
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="content-map-visible" checked>
-                    Mostra questo contenuto sulla mappa
-                </label>
-                <small style="display:block;margin-top:6px;opacity:0.75;line-height:1.4">
-                    • Attivo = il marker appare sulla mappa di tutti<br>
-                    • Disattivo = il contenuto è invisibile sulla mappa e si sblocca solo avvicinandosi
-                </small>
-            </div>
-
-            <button type="submit" id="publish-button">PUBBLICA CONTENUTO</button>
-            <div id="publish-status"></div>
-        </form>
-    </section>
-
-    <!-- RICERCA LUOGO -->
-    <section class="search-section" style="margin: 15px 0;">
-        <div style="display:flex; gap:8px;">
-            <input 
-                id="place-search" 
-                type="text" 
-                placeholder="Cerca via, piazza, luogo..." 
-                style="flex:1; padding:12px; border-radius:8px; border:1px solid #333; background:#1a1a1a; color:white;"
-            >
-            <button 
-                id="search-btn"
-                style="padding:12px 18px; background:#2a5a8a; color:white; border:none; border-radius:8px; cursor:pointer;"
-            >
-                Cerca
-            </button>
-        </div>
-        <div id="search-results" style="margin-top:8px;"></div>
-    </section>
-
-    <!-- MAPPA -->
-    <section id="map"></section>
-
-    <!-- LISTA VICINANZE -->
-    <section class="artworks-section">
+    <!-- CONTENUTI VICINI -->
+    <section class="section">
         <div class="section-header">
             <h2>Contenuti nelle vicinanze</h2>
-            <span id="artwork-count"></span>
+            <span id="artwork-count" style="opacity:0.6;"></span>
         </div>
         <div id="artworks-list">
-            <p>Attiva la posizione per esplorare MAESTRO.</p>
+            <p style="opacity:0.6;">Attiva la posizione per vedere cosa c’è intorno a te.</p>
+        </div>
+    </section>
+
+    <!-- CREAZIONE (secondaria) -->
+    <section class="section">
+        <button class="create-toggle" id="create-toggle">
+            + Crea un nuovo contenuto
+        </button>
+
+        <div class="create-section" id="create-section">
+            <div id="selected-location">
+                Nessun punto selezionato. Clicca sulla mappa.
+            </div>
+
+            <form id="content-form">
+                <div class="form-group">
+                    <label for="content-title">Titolo</label>
+                    <input id="content-title" type="text" placeholder="Nome del contenuto" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="content-description">Descrizione</label>
+                    <textarea id="content-description" rows="2" placeholder="Descrizione (opzionale)"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="content-nickname">Il tuo nickname</label>
+                    <input id="content-nickname" type="text" placeholder="Es. LunaRossa" maxlength="30">
+                </div>
+
+                <div class="form-group">
+                    <label for="content-type">Tipo di contenuto</label>
+                    <select id="content-type">
+                        <option value="text">Testo</option>
+                        <option value="poetry">Poesia</option>
+                        <option value="image">Immagine</option>
+                        <option value="video">Video</option>
+                        <option value="pdf">PDF</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="link">Link</option>
+                        <option value="ar">AR / 3D (USDZ o GLB)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="content-input-area"></div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="content-map-visible" checked>
+                        Mostra questo contenuto sulla mappa
+                    </label>
+                    <small style="display:block;margin-top:6px;opacity:0.7;line-height:1.4">
+                        • Attivo = il marker appare sulla mappa<br>
+                        • Disattivo = nascosto, si sblocca solo da vicino
+                    </small>
+                </div>
+
+                <button type="submit" id="publish-button">PUBBLICA CONTENUTO</button>
+                <div id="publish-status"></div>
+            </form>
         </div>
     </section>
 </main>

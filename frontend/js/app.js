@@ -23,15 +23,24 @@ map.on("click", function (event) {
 
     selectedLocation = { lat, lng };
 
-    // Marker temporaneo del punto scelto
     if (window.tempMarker) {
         map.removeLayer(window.tempMarker);
     }
-    window.tempMarker = L.marker([lat, lng], {
-        opacity: 0.8
-    }).addTo(map).bindPopup("Punto selezionato").openPopup();
+
+    window.tempMarker = L.marker([lat, lng], { opacity: 0.85 })
+        .addTo(map)
+        .bindPopup("Punto selezionato")
+        .openPopup();
 
     selectedLocationElementUpdate(lat, lng);
+
+    // Apri automaticamente la sezione creazione se è chiusa
+    const createSection = document.getElementById("create-section");
+    if (createSection && !createSection.classList.contains("open")) {
+        createSection.classList.add("open");
+        const toggle = document.getElementById("create-toggle");
+        if (toggle) toggle.textContent = "− Chiudi creazione";
+    }
 });
 
 // ==========================================
@@ -39,13 +48,27 @@ map.on("click", function (event) {
 // ==========================================
 const locateButton = document.getElementById("locate-btn");
 const gpsStatus = document.getElementById("gps-status");
-const locationInfo = document.getElementById("location-info");
+const gpsBanner = document.getElementById("gps-banner");
 const artworksList = document.getElementById("artworks-list");
 const artworkCount = document.getElementById("artwork-count");
 const contentForm = document.getElementById("content-form");
 const contentType = document.getElementById("content-type");
 const contentInputArea = document.getElementById("content-input-area");
 const publishStatus = document.getElementById("publish-status");
+const createToggle = document.getElementById("create-toggle");
+const createSection = document.getElementById("create-section");
+
+// Toggle sezione creazione
+if (createToggle) {
+    createToggle.addEventListener("click", function () {
+        if (createSection) {
+            createSection.classList.toggle("open");
+            this.textContent = createSection.classList.contains("open")
+                ? "− Chiudi creazione"
+                : "+ Crea un nuovo contenuto";
+        }
+    });
+}
 
 // ==========================================
 // POSIZIONE SELEZIONATA
@@ -54,9 +77,8 @@ function selectedLocationElementUpdate(lat, lng) {
     const box = document.getElementById("selected-location");
     if (box) {
         box.innerHTML = `
-            <strong>Punto selezionato</strong><br><br>
-            Latitudine: ${lat.toFixed(6)}<br>
-            Longitudine: ${lng.toFixed(6)}
+            <strong>Punto selezionato</strong><br>
+            ${lat.toFixed(6)}, ${lng.toFixed(6)}
         `;
     }
 }
@@ -64,9 +86,13 @@ function selectedLocationElementUpdate(lat, lng) {
 // ==========================================
 // TIPO CONTENUTO (form dinamico)
 // ==========================================
-contentType.addEventListener("change", updateContentInput);
+if (contentType) {
+    contentType.addEventListener("change", updateContentInput);
+}
 
 function updateContentInput() {
+    if (!contentInputArea || !contentType) return;
+
     const type = contentType.value;
 
     if (type === "youtube") {
@@ -97,9 +123,10 @@ function updateContentInput() {
         contentInputArea.innerHTML = `
             <label>Modello 3D (USDZ o GLB)</label>
             <input id="content-file" type="file" accept=".usdz,.glb,.gltf" required>
-            <small>
-                • <strong>USDZ</strong> → migliore su iPhone<br>
-                • <strong>GLB</strong> → funziona su Android e nel browser
+            <small style="display:block;margin-top:6px;opacity:0.7">
+                • USDZ → migliore su iPhone<br>
+                • GLB → funziona su Android e browser<br>
+                Consigliato: file sotto i 5-6 MB
             </small>
         `;
         return;
@@ -114,7 +141,7 @@ function updateContentInput() {
         contentInputArea.innerHTML = `
             <label>File</label>
             <input id="content-file" type="file" accept="${accept}" required>
-            <small>Dimensione massima: 100 MB</small>
+            <small style="display:block;margin-top:6px;opacity:0.7">Dimensione massima consigliata: 6 MB</small>
         `;
         return;
     }
@@ -123,7 +150,9 @@ function updateContentInput() {
 // ==========================================
 // PUBBLICAZIONE CONTENUTO
 // ==========================================
-contentForm.addEventListener("submit", createContent);
+if (contentForm) {
+    contentForm.addEventListener("submit", createContent);
+}
 
 async function createContent(event) {
     event.preventDefault();
@@ -150,24 +179,18 @@ async function createContent(event) {
         let contentUrl = null;
         let contentText = null;
 
-        // Contenuti testuali / link / youtube
         if (type === "youtube" || type === "link") {
             const input = document.getElementById("content-url");
-            if (!input || !input.value.trim()) {
-                throw new Error("Inserisci un URL valido.");
-            }
+            if (!input || !input.value.trim()) throw new Error("Inserisci un URL valido.");
             contentUrl = input.value.trim();
         }
 
         if (type === "poetry" || type === "text") {
             const input = document.getElementById("content-text");
-            if (!input || !input.value.trim()) {
-                throw new Error("Inserisci il testo.");
-            }
+            if (!input || !input.value.trim()) throw new Error("Inserisci il testo.");
             contentText = input.value.trim();
         }
 
-        // Upload file
         if (type === "ar" || type === "image" || type === "video" || type === "pdf") {
             const fileInput = document.getElementById("content-file");
             if (!fileInput || !fileInput.files || !fileInput.files.length) {
@@ -179,15 +202,14 @@ async function createContent(event) {
                 throw new Error("Il file supera il limite di 100 MB.");
             }
 
-            showPublishStatus("Caricamento del file in corso... (può richiedere tempo)");
+            showPublishStatus("Caricamento del file in corso...");
 
             const formData = new FormData();
             formData.append("type", type);
             formData.append("file", file);
 
-            // Timeout più lungo per file grandi
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minuti
+            const timeoutId = setTimeout(() => controller.abort(), 120000);
 
             let uploadResponse;
             try {
@@ -199,27 +221,25 @@ async function createContent(event) {
             } catch (err) {
                 clearTimeout(timeoutId);
                 if (err.name === "AbortError") {
-                    throw new Error("Timeout: il file è troppo grande o la connessione è lenta. Prova con un file sotto i 6 MB.");
+                    throw new Error("Timeout: prova con un file sotto i 6 MB.");
                 }
-                throw new Error("Errore di rete durante l'upload. Riprova o usa un file più piccolo.");
+                throw new Error("Errore di rete durante l'upload.");
             }
             clearTimeout(timeoutId);
 
-            const contentType = uploadResponse.headers.get("content-type") || "";
-            if (!contentType.includes("application/json")) {
-                throw new Error("Il server non ha risposto correttamente. Il file potrebbe essere troppo grande per il piano gratuito.");
+            const ct = uploadResponse.headers.get("content-type") || "";
+            if (!ct.includes("application/json")) {
+                throw new Error("Il server non ha risposto correttamente (file troppo grande?).");
             }
 
             const uploadData = await uploadResponse.json();
-
             if (!uploadResponse.ok) {
-                throw new Error(uploadData.error || "Errore durante il caricamento del file.");
+                throw new Error(uploadData.error || "Errore durante il caricamento.");
             }
 
             contentUrl = uploadData.url;
         }
 
-        // Creazione record
         showPublishStatus("Salvataggio del contenuto...");
 
         const contentData = {
@@ -232,48 +252,46 @@ async function createContent(event) {
             content_url: contentUrl,
             content_text: contentText,
             thumbnail_url: type === "image" ? contentUrl : null,
-            nickname: nickname,
+            nickname,
             is_map_visible: isMapVisible,
-            activation_radius: 80
+            activation_radius: 80,
+            anchor_type: "gps"
         };
 
         const response = await fetch(`${API_URL}/api/contents`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(contentData)
         });
 
-        // Controllo se la risposta è JSON
-        const contentTypeHeader = response.headers.get("content-type") || "";
-        if (!contentTypeHeader.includes("application/json")) {
-            const text = await response.text();
-            console.error("Risposta non JSON ricevuta:", text.substring(0, 200));
-            throw new Error("Il server ha restituito HTML invece di JSON. Controlla che il backend sia avviato correttamente.");
+        const headerCT = response.headers.get("content-type") || "";
+        if (!headerCT.includes("application/json")) {
+            throw new Error("Risposta non valida dal server.");
         }
 
         const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.error || "Errore durante la creazione del contenuto.");
+            throw new Error(data.error || "Errore durante la creazione.");
         }
 
-        // Successo
-        showPublishStatus("✓ Contenuto pubblicato con successo!");
+        showPublishStatus("✓ Contenuto pubblicato!");
 
         addContentMarker(data);
         loadContents();
 
-        // Reset form
+        // Reset
         contentForm.reset();
         selectedLocation = null;
-        document.getElementById("selected-location").innerHTML = "Nessun punto selezionato.";
+        document.getElementById("selected-location").innerHTML = "Nessun punto selezionato. Clicca sulla mappa.";
         if (window.tempMarker) {
             map.removeLayer(window.tempMarker);
             window.tempMarker = null;
         }
         updateContentInput();
+
+        // Chiudi il form dopo la pubblicazione
+        if (createSection) createSection.classList.remove("open");
+        if (createToggle) createToggle.textContent = "+ Crea un nuovo contenuto";
 
     } catch (error) {
         console.error(error);
@@ -296,11 +314,12 @@ if (locateButton) {
 
 function locateUser() {
     if (!navigator.geolocation) {
-        gpsStatus.textContent = "GPS non supportato.";
+        if (gpsStatus) gpsStatus.textContent = "GPS non supportato";
         return;
     }
 
-    gpsStatus.textContent = "Ricerca posizione...";
+    if (gpsStatus) gpsStatus.textContent = "Ricerca...";
+    if (locateButton) locateButton.textContent = "Ricerca in corso...";
 
     navigator.geolocation.getCurrentPosition(
         function (position) {
@@ -310,11 +329,9 @@ function locateUser() {
 
             currentPosition = { lat, lng, accuracy };
 
-            // Rimuovi marker precedenti
             if (userMarker) map.removeLayer(userMarker);
             if (userCircle) map.removeLayer(userCircle);
 
-            // Nuovo marker + cerchio precisione
             userMarker = L.marker([lat, lng]).addTo(map)
                 .bindPopup("La tua posizione")
                 .openPopup();
@@ -326,30 +343,29 @@ function locateUser() {
                 fillOpacity: 0.15
             }).addTo(map);
 
-            // Centra immediatamente la mappa
             map.setView([lat, lng], 17);
-            map.invalidateSize();          // forza il ridisegno
+            map.invalidateSize();
 
-            gpsStatus.textContent = `Posizione trovata · precisione ±${Math.round(accuracy)} m`;
-
-            if (locationInfo) {
-                locationInfo.innerHTML = `
-                    <strong>La tua posizione</strong><br>
-                    ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
-                    Precisione: ±${Math.round(accuracy)} m
-                `;
+            if (gpsStatus) {
+                gpsStatus.textContent = `±${Math.round(accuracy)} m`;
             }
 
-            // Ricarica i contenuti vicini
+            // Nascondi il banner GPS
+            if (gpsBanner) gpsBanner.classList.add("hidden");
+
+            if (locateButton) locateButton.textContent = "📍 Aggiorna posizione";
+
             loadContents();
         },
         function (error) {
             console.error(error);
-            let msg = "Impossibile ottenere la posizione.";
-            if (error.code === 1) msg = "Permesso di geolocalizzazione negato.";
-            if (error.code === 2) msg = "Posizione non disponibile.";
-            if (error.code === 3) msg = "Timeout nella ricerca della posizione.";
-            gpsStatus.textContent = msg;
+            let msg = "Posizione non disponibile";
+            if (error.code === 1) msg = "Permesso negato";
+            if (error.code === 2) msg = "Posizione non disponibile";
+            if (error.code === 3) msg = "Timeout";
+
+            if (gpsStatus) gpsStatus.textContent = msg;
+            if (locateButton) locateButton.textContent = "📍 Attiva la mia posizione";
         },
         {
             enableHighAccuracy: true,
@@ -364,30 +380,48 @@ function locateUser() {
 // ==========================================
 async function loadContents() {
     try {
-        let url = `${API_URL}/api/contents`;
+        // Carichiamo sempre tutti i contenuti per i marker
+        const responseAll = await fetch(`${API_URL}/api/contents`);
+        const allContents = await responseAll.json();
 
+        if (!responseAll.ok) {
+            throw new Error(allContents.error || "Errore caricamento");
+        }
+
+        // Se abbiamo GPS, prendiamo anche le distanze
+        let distanceMap = {};
         if (currentPosition) {
-            url = `${API_URL}/api/contents/nearby?lat=${currentPosition.lat}&lng=${currentPosition.lng}&radius=3000`;
+            const responseNearby = await fetch(
+                `${API_URL}/api/contents/nearby?lat=${currentPosition.lat}&lng=${currentPosition.lng}&radius=50000`
+            );
+            const nearbyData = await responseNearby.json();
+            if (responseNearby.ok && nearbyData.contents) {
+                nearbyData.contents.forEach(c => {
+                    distanceMap[c.id] = c.distance_meters;
+                });
+            }
         }
 
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || "Errore caricamento contenuti.");
-        }
-
-        // Gestisce sia array semplice che risposta nearby
-        const contents = Array.isArray(data) ? data : (data.contents || []);
+        const enriched = allContents.map(c => ({
+            ...c,
+            distance_meters: distanceMap[c.id] !== undefined ? distanceMap[c.id] : null
+        }));
 
         clearContentMarkers();
 
-        // Mostra sulla mappa solo quelli visibili
-        contents
+        // Marker: tutti quelli visibili sulla mappa
+        enriched
             .filter(c => c.is_map_visible !== 0)
             .forEach(addContentMarker);
 
-        renderContentList(contents);
+        // Lista: ordinata per distanza se possibile
+        const listContents = currentPosition
+            ? enriched
+                .filter(c => c.distance_meters !== null)
+                .sort((a, b) => a.distance_meters - b.distance_meters)
+            : enriched;
+
+        renderContentList(listContents);
 
     } catch (error) {
         console.error("Errore contenuti:", error);
@@ -395,27 +429,26 @@ async function loadContents() {
 }
 
 function clearContentMarkers() {
-    contentMarkers.forEach(marker => map.removeLayer(marker));
+    contentMarkers.forEach(m => map.removeLayer(m));
     contentMarkers = [];
 }
 
 function addContentMarker(content) {
-    if (!content || !content.latitude || !content.longitude) return;
+    if (!content || content.latitude == null || content.longitude == null) return;
 
     const marker = L.marker([content.latitude, content.longitude]).addTo(map);
 
     marker.bindPopup(`
-        <div class="marker-popup">
+        <div style="min-width:160px">
             <strong>${getContentIcon(content.type)} ${escapeHtml(content.title)}</strong><br>
-            <small>${escapeHtml(content.type)} · ${escapeHtml(content.nickname || "Anonimo")}</small><br><br>
-            <button onclick="openContentViewerById(${content.id})">Apri contenuto</button>
+            <small>${escapeHtml(content.nickname || "Anonimo")}</small><br><br>
+            <button onclick="openContentViewerById(${content.id})" style="padding:6px 12px;cursor:pointer;">
+                Apri
+            </button>
         </div>
     `);
 
-    marker.on("click", function () {
-        openContentViewer(content);
-    });
-
+    marker.on("click", () => openContentViewer(content));
     contentMarkers.push(marker);
 }
 
@@ -425,7 +458,7 @@ function renderContentList(contents) {
     artworksList.innerHTML = "";
 
     if (!contents.length) {
-        artworksList.innerHTML = `<p>Nessun contenuto nelle vicinanze.</p>`;
+        artworksList.innerHTML = `<p style="opacity:0.6">Nessun contenuto trovato.</p>`;
         if (artworkCount) artworkCount.textContent = "0";
         return;
     }
@@ -433,43 +466,34 @@ function renderContentList(contents) {
     contents.forEach(content => {
         const card = document.createElement("div");
         card.className = "content-card";
-        card.style.cursor = "pointer";
-        card.style.padding = "14px";
-        card.style.marginBottom = "10px";
-        card.style.background = "#1a1a1a";
-        card.style.borderRadius = "10px";
-        card.style.border = "1px solid #2a2a2a";
 
-        // Calcola se è sbloccato
         let statusIcon = "🔒";
         let statusText = "Bloccato";
-        let distanceText = "";
+        let distanceText = "—";
 
-        if (content.distance_meters !== undefined) {
+        if (content.distance_meters != null) {
             distanceText = `${content.distance_meters} m`;
             const radius = content.activation_radius || 80;
             if (content.distance_meters <= radius) {
                 statusIcon = "🔓";
                 statusText = "Sbloccato";
             }
-        } else {
-            distanceText = "—";
         }
 
         card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                 <div>
-                    <strong style="font-size:15px;">${getContentIcon(content.type)} ${escapeHtml(content.title)}</strong><br>
-                    <small style="opacity:0.75;">${escapeHtml(content.nickname || "Anonimo")} · ${escapeHtml(content.type)}</small>
+                    <strong>${getContentIcon(content.type)} ${escapeHtml(content.title)}</strong><br>
+                    <small style="opacity:0.7">${escapeHtml(content.nickname || "Anonimo")} · ${escapeHtml(content.type)}</small>
                 </div>
-                <div style="text-align:right;font-size:13px;">
+                <div style="text-align:right;font-size:13px;white-space:nowrap;">
                     <div>${statusIcon} ${statusText}</div>
-                    <div style="opacity:0.7;margin-top:3px;">${distanceText}</div>
+                    <div style="opacity:0.65;margin-top:2px">${distanceText}</div>
                 </div>
             </div>
         `;
 
-        card.addEventListener("click", function () {
+        card.addEventListener("click", () => {
             map.setView([content.latitude, content.longitude], 17);
             openContentViewer(content);
         });
@@ -477,34 +501,28 @@ function renderContentList(contents) {
         artworksList.appendChild(card);
     });
 
-    if (artworkCount) {
-        artworkCount.textContent = contents.length;
-    }
+    if (artworkCount) artworkCount.textContent = contents.length;
 }
 
 // ==========================================
-// VISUALIZZATORE CONTENUTI
+// VISUALIZZATORE
 // ==========================================
 function openContentViewer(content) {
     if (!content) return;
 
-    // Controllo prossimità (cuore di MAESTRO)
     const activationRadius = content.activation_radius || 80;
     let isNear = false;
     let distance = null;
 
     if (currentPosition) {
         distance = calculateDistance(
-            currentPosition.lat,
-            currentPosition.lng,
-            content.latitude,
-            content.longitude
+            currentPosition.lat, currentPosition.lng,
+            content.latitude, content.longitude
         );
         isNear = distance <= activationRadius;
     }
 
     let viewer = document.getElementById("content-viewer");
-
     if (!viewer) {
         viewer = document.createElement("div");
         viewer.id = "content-viewer";
@@ -526,9 +544,9 @@ function openContentViewer(content) {
         body.innerHTML = `
             <h2>${escapeHtml(content.title)}</h2>
             <p style="opacity:0.7">di ${escapeHtml(content.nickname || "Anonimo")}</p>
-            <div style="margin-top:30px;padding:20px;background:#222;border-radius:12px;text-align:center;">
-                <p>📍 Attiva il GPS per verificare se sei abbastanza vicino</p>
-                <button onclick="locateUser()" style="margin-top:15px;padding:10px 20px;background:#2a7a3a;color:white;border:none;border-radius:8px;cursor:pointer;">
+            <div style="margin-top:30px;padding:24px;background:#1a1a1a;border-radius:12px;text-align:center;border:1px solid #333;">
+                <p style="font-size:16px;">📍 Attiva la posizione per sbloccare i contenuti</p>
+                <button onclick="locateUser()" style="margin-top:16px;padding:12px 24px;background:#2a7a3a;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;">
                     Attiva posizione
                 </button>
             </div>
@@ -537,38 +555,31 @@ function openContentViewer(content) {
         body.innerHTML = `
             <h2>${escapeHtml(content.title)}</h2>
             <p style="opacity:0.7">di ${escapeHtml(content.nickname || "Anonimo")}</p>
-            <div style="margin-top:30px;padding:25px;background:#1a1a1a;border-radius:12px;text-align:center;border:1px solid #333;">
-                <div style="font-size:40px;margin-bottom:15px;">🔒</div>
-                <h3>Contenuto bloccato</h3>
-                <p>Devi avvicinarti di più per sbloccarlo.</p>
-                <p style="margin-top:12px;font-size:18px;">
-                    Distanza attuale: <strong>${Math.round(distance)} m</strong><br>
-                    Raggio di attivazione: <strong>${activationRadius} m</strong>
+            <div style="margin-top:30px;padding:28px;background:#1a1a1a;border-radius:12px;text-align:center;border:1px solid #333;">
+                <div style="font-size:42px;margin-bottom:12px;">🔒</div>
+                <h3 style="margin:0 0 8px 0;">Contenuto bloccato</h3>
+                <p>Devi avvicinarti di più.</p>
+                <p style="margin-top:14px;font-size:17px;">
+                    Distanza: <strong>${Math.round(distance)} m</strong><br>
+                    Raggio: <strong>${activationRadius} m</strong>
                 </p>
             </div>
         `;
     } else {
-        // Sei abbastanza vicino → mostra il contenuto completo
         body.innerHTML = renderContent(content);
     }
 
     viewer.classList.add("visible");
 }
 
-// Calcolo distanza (Haversine)
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // raggio Terra in metri
-    const toRad = (deg) => deg * Math.PI / 180;
-
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+    const a = Math.sin(dLat/2)**2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 function renderContent(content) {
@@ -584,10 +595,10 @@ function renderContent(content) {
                 <p style="opacity:0.7">di ${nick}</p>
                 ${description ? `<p>${description}</p>` : ""}
                 <div class="youtube-container">
-                    <iframe src="https://www.youtube.com/embed/${videoId}"
-                        title="${title}" frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen></iframe>
+                    <iframe src="https://www.youtube.com/embed/${videoId}" title="${title}"
+                        frameborder="0" allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
                 </div>
             `;
         }
@@ -610,7 +621,6 @@ function renderContent(content) {
             ${description ? `<p>${description}</p>` : ""}
             <video class="viewer-video" controls playsinline>
                 <source src="${absoluteUrl(content.content_url)}">
-                Il tuo browser non supporta la riproduzione video.
             </video>
         `;
     }
@@ -622,7 +632,7 @@ function renderContent(content) {
             ${description ? `<p>${description}</p>` : ""}
             <iframe class="viewer-pdf" src="${absoluteUrl(content.content_url)}"></iframe>
             <br>
-            <a href="${absoluteUrl(content.content_url)}" target="_blank" rel="noopener">Apri PDF in una nuova finestra</a>
+            <a href="${absoluteUrl(content.content_url)}" target="_blank" rel="noopener">Apri PDF</a>
         `;
     }
 
@@ -643,8 +653,7 @@ function renderContent(content) {
             <h2>${title}</h2>
             <p style="opacity:0.7">di ${nick}</p>
             ${description ? `<p>${description}</p>` : ""}
-
-            <div style="margin-top:20px;">
+            <div style="margin-top:16px;">
                 <model-viewer
                     src="${url}"
                     alt="${title}"
@@ -652,23 +661,13 @@ function renderContent(content) {
                     camera-controls
                     ar
                     ar-modes="webxr scene-viewer quick-look"
-                    style="width:100%; height:360px; background:#111; border-radius:12px;"
-                >
-                    <div slot="poster" style="color:white; text-align:center; padding-top:140px;">
-                        Caricamento modello 3D...
-                    </div>
+                    style="width:100%; height:340px; background:#111; border-radius:12px;">
                 </model-viewer>
             </div>
-
-            <div style="margin-top:18px; text-align:center;">
-                ${isUsdz ? `
-                    <a class="ar-button" href="${url}" rel="ar" style="display:inline-block; margin:6px;">
-                        Apri in AR (iPhone)
-                    </a>
-                ` : ""}
-                <p style="margin-top:12px; font-size:13px; opacity:0.7;">
-                    Su Android usa il pulsante AR del visualizzatore 3D.<br>
-                    Su iPhone puoi usare anche il pulsante dedicato.
+            <div style="margin-top:16px; text-align:center;">
+                ${isUsdz ? `<a class="ar-button" href="${url}" rel="ar">Apri in AR (iPhone)</a>` : ""}
+                <p style="margin-top:10px;font-size:13px;opacity:0.65;">
+                    Su Android usa il pulsante AR del visualizzatore.
                 </p>
             </div>
         `;
@@ -686,7 +685,7 @@ function genericLinkContent(content, label) {
         <h2>${escapeHtml(content.title || "")}</h2>
         <p style="opacity:0.7">di ${escapeHtml(content.nickname || "Anonimo")}</p>
         ${content.description ? `<p>${escapeHtml(content.description)}</p>` : ""}
-        <a class="viewer-link" href="${absoluteUrl(content.content_url)}" target="_blank" rel="noopener noreferrer">
+        <a class="viewer-link" href="${absoluteUrl(content.content_url)}" target="_blank" rel="noopener">
             ${label}
         </a>
     `;
@@ -696,9 +695,7 @@ function getYouTubeId(url) {
     if (!url) return null;
     try {
         const parsed = new URL(url);
-        if (parsed.hostname.includes("youtu.be")) {
-            return parsed.pathname.replace("/", "");
-        }
+        if (parsed.hostname.includes("youtu.be")) return parsed.pathname.replace("/", "");
         if (parsed.hostname.includes("youtube.com")) {
             return parsed.searchParams.get("v") || parsed.pathname.split("/").pop();
         }
@@ -721,7 +718,7 @@ function getContentIcon(type) {
 }
 
 function escapeHtml(value) {
-    if (value === null || value === undefined) return "";
+    if (value == null) return "";
     return String(value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -734,18 +731,16 @@ async function openContentViewerById(id) {
     try {
         const response = await fetch(`${API_URL}/api/contents/${id}`);
         const content = await response.json();
-        if (!response.ok) throw new Error(content.error || "Contenuto non trovato.");
+        if (!response.ok) throw new Error(content.error || "Non trovato");
         openContentViewer(content);
-    } catch (error) {
-        console.error(error);
+    } catch (err) {
+        console.error(err);
         alert("Impossibile aprire il contenuto.");
     }
 }
 
 function closeContentViewer(event) {
-    if (event && event.target && !event.target.classList.contains("content-viewer-backdrop")) {
-        return;
-    }
+    if (event && event.target && !event.target.classList.contains("content-viewer-backdrop")) return;
     const viewer = document.getElementById("content-viewer");
     if (viewer) viewer.classList.remove("visible");
 }
@@ -760,57 +755,47 @@ function addViewerStyles() {
         #content-viewer.visible { display: block; }
         .content-viewer-backdrop {
             position: absolute; inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.87);
             display: flex; align-items: center; justify-content: center;
-            padding: 20px;
+            padding: 16px;
         }
         .content-viewer-panel {
             position: relative;
-            width: min(1000px, 95vw);
+            width: min(960px, 96vw);
             max-height: 92vh;
             overflow: auto;
             background: #111;
             border: 1px solid #333;
             border-radius: 16px;
-            padding: 28px;
+            padding: 24px;
             color: white;
-            box-shadow: 0 20px 80px rgba(0,0,0,0.6);
         }
         .content-viewer-close {
-            position: absolute; top: 10px; right: 14px;
+            position: absolute; top: 8px; right: 12px;
             border: 0; background: none; color: white;
-            font-size: 32px; cursor: pointer; z-index: 2;
+            font-size: 30px; cursor: pointer;
         }
-        .viewer-image { display: block; max-width: 100%; max-height: 70vh; margin: 20px auto; border-radius: 8px; }
-        .viewer-video { display: block; width: 100%; max-height: 70vh; margin: 20px auto; }
-        .viewer-pdf { width: 100%; height: 70vh; border: 0; background: white; }
-        .youtube-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden; margin-top: 20px; }
+        .viewer-image { display: block; max-width: 100%; max-height: 65vh; margin: 16px auto; border-radius: 8px; }
+        .viewer-video { display: block; width: 100%; max-height: 65vh; margin: 16px auto; }
+        .viewer-pdf { width: 100%; height: 65vh; border: 0; background: #fff; }
+        .youtube-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; margin-top: 16px; }
         .youtube-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
-        .viewer-text { white-space: pre-wrap; font-size: 18px; line-height: 1.8; margin-top: 25px; padding: 25px; border-left: 2px solid #888; }
+        .viewer-text { white-space: pre-wrap; font-size: 17px; line-height: 1.75; margin-top: 20px; padding: 20px; border-left: 2px solid #666; }
         .viewer-link, .ar-button {
-            display: inline-block; margin-top: 20px; padding: 12px 20px;
-            border: 1px solid #777; border-radius: 8px; color: white; text-decoration: none;
+            display: inline-block; margin-top: 16px; padding: 11px 18px;
+            border: 1px solid #666; border-radius: 8px; color: white; text-decoration: none;
         }
-        .ar-placeholder { text-align: center; padding: 50px 20px; }
-        .ar-icon { font-size: 70px; }
     `;
     document.head.appendChild(style);
 }
 
-
 // ==========================================
-// RICERCA LUOGO (Nominatim)
+// RICERCA LUOGO
 // ==========================================
 const searchInput = document.getElementById("place-search");
-const searchBtn = document.getElementById("search-btn");
-const searchResults = document.getElementById("search-results");
-
-if (searchBtn) {
-    searchBtn.addEventListener("click", searchPlace);
-}
 
 if (searchInput) {
-    searchInput.addEventListener("keydown", function(e) {
+    searchInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") {
             e.preventDefault();
             searchPlace();
@@ -819,64 +804,44 @@ if (searchInput) {
 }
 
 async function searchPlace() {
-    const query = searchInput.value.trim();
+    const query = searchInput?.value.trim();
     if (!query) return;
 
-    searchResults.innerHTML = `<p style="opacity:0.7;">Ricerca in corso...</p>`;
-
     try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
-        
-        const response = await fetch(url, {
-            headers: {
-                "Accept-Language": "it"
-            }
-        });
-        
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`;
+        const response = await fetch(url, { headers: { "Accept-Language": "it" } });
         const results = await response.json();
 
         if (!results.length) {
-            searchResults.innerHTML = `<p style="opacity:0.7;">Nessun risultato trovato.</p>`;
+            alert("Nessun risultato trovato.");
             return;
         }
 
-        searchResults.innerHTML = results.map((r, i) => `
-            <div 
-                class="search-result-item"
-                style="padding:10px; margin-bottom:6px; background:#1a1a1a; border-radius:8px; cursor:pointer; border:1px solid #333;"
-                onclick="goToSearchResult(${r.lat}, ${r.lon}, '${escapeHtml(r.display_name).replace(/'/g, "\'")}')"
-            >
-                <strong style="font-size:14px;">${escapeHtml(r.display_name)}</strong>
-            </div>
-        `).join("");
+        // Prendi il primo risultato
+        const r = results[0];
+        goToSearchResult(r.lat, r.lon, r.display_name);
 
     } catch (err) {
         console.error(err);
-        searchResults.innerHTML = `<p style="color:#ff6b6b;">Errore durante la ricerca.</p>`;
+        alert("Errore durante la ricerca.");
     }
 }
 
 function goToSearchResult(lat, lon, name) {
     map.setView([lat, lon], 17);
-    
-    // Marker temporaneo del risultato
-    if (window.searchMarker) {
-        map.removeLayer(window.searchMarker);
-    }
-    
+
+    if (window.searchMarker) map.removeLayer(window.searchMarker);
+
     window.searchMarker = L.marker([lat, lon])
         .addTo(map)
         .bindPopup(name)
         .openPopup();
 
-    // Imposta anche come punto selezionato per creare contenuto
     selectedLocation = { lat: parseFloat(lat), lng: parseFloat(lon) };
     selectedLocationElementUpdate(parseFloat(lat), parseFloat(lon));
 
-    searchResults.innerHTML = "";
-    searchInput.value = "";
+    if (searchInput) searchInput.value = "";
 }
-
 
 // ==========================================
 // INIZIALIZZAZIONE
@@ -884,21 +849,27 @@ function goToSearchResult(lat, lon, name) {
 updateContentInput();
 loadContents();
 
-// Ripristina nickname salvato
+// Nickname salvato
 const savedNick = localStorage.getItem("maestro_nickname");
 if (savedNick) {
     const nickInput = document.getElementById("content-nickname");
     if (nickInput) nickInput.value = savedNick;
 }
 
-// Salva nickname quando cambia
 const nickInput = document.getElementById("content-nickname");
 if (nickInput) {
-    nickInput.addEventListener("change", function() {
+    nickInput.addEventListener("change", function () {
         const val = this.value.trim();
         if (val) localStorage.setItem("maestro_nickname", val);
     });
 }
+
+// Chiedi la posizione dopo un breve ritardo (migliore UX)
+setTimeout(() => {
+    if (!currentPosition && locateButton) {
+        // Non forziamo il popup del browser subito, ma rendiamo il banner molto visibile
+    }
+}, 800);
 
 document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closeContentViewer();
