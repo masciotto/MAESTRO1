@@ -380,7 +380,7 @@ function locateUser() {
 // ==========================================
 async function loadContents() {
     try {
-        // Carichiamo sempre tutti i contenuti per i marker
+        // Carichiamo SEMPRE tutti i contenuti
         const responseAll = await fetch(`${API_URL}/api/contents`);
         const allContents = await responseAll.json();
 
@@ -388,7 +388,7 @@ async function loadContents() {
             throw new Error(allContents.error || "Errore caricamento");
         }
 
-        // Se abbiamo GPS, prendiamo anche le distanze
+        // Distanze (se abbiamo GPS)
         let distanceMap = {};
         if (currentPosition) {
             const responseNearby = await fetch(
@@ -407,14 +407,14 @@ async function loadContents() {
             distance_meters: distanceMap[c.id] !== undefined ? distanceMap[c.id] : null
         }));
 
+        // Aggiorna i marker SENZA cancellarli tutti se non necessario
         clearContentMarkers();
 
-        // Marker: tutti quelli visibili sulla mappa
         enriched
             .filter(c => c.is_map_visible !== 0)
             .forEach(addContentMarker);
 
-        // Lista: ordinata per distanza se possibile
+        // Lista ordinata per distanza
         const listContents = currentPosition
             ? enriched
                 .filter(c => c.distance_meters !== null)
@@ -433,17 +433,68 @@ function clearContentMarkers() {
     contentMarkers = [];
 }
 
+function getMarkerIcon(type) {
+    const colors = {
+        text:    "#4CAF50",
+        poetry:  "#9C27B0",
+        image:   "#2196F3",
+        video:   "#F44336",
+        pdf:     "#FF9800",
+        youtube: "#E91E63",
+        link:    "#00BCD4",
+        ar:      "#FFEB3B"
+    };
+
+    const icons = {
+        text:    "T",
+        poetry:  "✎",
+        image:   "🖼",
+        video:   "▶",
+        pdf:     "📄",
+        youtube: "▶",
+        link:    "🔗",
+        ar:      "◇"
+    };
+
+    const color = colors[type] || "#888";
+    const icon  = icons[type]  || "●";
+
+    return L.divIcon({
+        className: "maestro-marker",
+        html: `<div style="
+            background: ${color};
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #111;
+            font-weight: bold;
+        ">${icon}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+    });
+}
+
 function addContentMarker(content) {
     if (!content || content.latitude == null || content.longitude == null) return;
 
-    const marker = L.marker([content.latitude, content.longitude]).addTo(map);
+    const marker = L.marker(
+        [content.latitude, content.longitude],
+        { icon: getMarkerIcon(content.type) }
+    ).addTo(map);
 
     marker.bindPopup(`
         <div style="min-width:160px">
             <strong>${getContentIcon(content.type)} ${escapeHtml(content.title)}</strong><br>
             <small>${escapeHtml(content.nickname || "Anonimo")}</small><br><br>
             <button onclick="openContentViewerById(${content.id})" style="padding:6px 12px;cursor:pointer;">
-                Apri
+                Open
             </button>
         </div>
     `);
