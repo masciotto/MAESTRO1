@@ -167,9 +167,15 @@ async function createContent(event) {
     const type = contentType.value;
     const nickname = document.getElementById("content-nickname")?.value.trim() || "Anonimo";
     const isMapVisible = document.getElementById("content-map-visible")?.checked !== false;
+    const isLocked = document.getElementById("content-locked")?.checked !== false;
 
     if (!title) {
         showPublishStatus("Inserisci un titolo.", true);
+        return;
+    }
+
+    if (!type) {
+        showPublishStatus("Select the file type.", true);
         return;
     }
 
@@ -254,7 +260,7 @@ async function createContent(event) {
             thumbnail_url: type === "image" ? contentUrl : null,
             nickname,
             is_map_visible: isMapVisible,
-            activation_radius: 80,
+            activation_radius: isLocked ? 80 : 999999,
             anchor_type: "gps"
         };
 

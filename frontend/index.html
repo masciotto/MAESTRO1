@@ -247,7 +247,8 @@
 
                 <div class="form-group">
                     <label for="content-type">Select the file type</label>
-                    <select id="content-type">
+                    <select id="content-type" required>
+                        <option value="" disabled selected>Select the file type</option>
                         <option value="text">Text</option>
                         <option value="poetry">Poetry</option>
                         <option value="image">Image</option>
@@ -264,11 +265,22 @@
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="content-map-visible" checked>
-                        Mostra questo contenuto sulla mappa
+                        Show on map
                     </label>
                     <small style="display:block;margin-top:6px;opacity:0.7;line-height:1.4">
-                        • Attivo = il marker appare sulla mappa<br>
-                        • Disattivo = nascosto, si sblocca solo da vicino
+                        • On = marker visible on the map<br>
+                        • Off = hidden from map, only reachable by proximity
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="content-locked" checked>
+                        Require proximity to unlock
+                    </label>
+                    <small style="display:block;margin-top:6px;opacity:0.7;line-height:1.4">
+                        • On = content stays locked until you get close<br>
+                        • Off = content is always unlocked for everyone
                     </small>
                 </div>
 
