@@ -8,6 +8,9 @@ const allowedTypes = [
   "image", "video", "link", "text"
 ];
 
+// =====================================================
+// GET /api/contents
+// =====================================================
 router.get("/", async (req, res) => {
   try {
     const result = await db.query(`
@@ -17,7 +20,7 @@ router.get("/", async (req, res) => {
              heading, accuracy, anchor_type, scale,
              rotation_x, rotation_y, rotation_z, anchor_data,
              created_at, updated_at
-      FROM public.contents
+      FROM contents
       ORDER BY created_at DESC
     `);
     res.json(result.rows);
@@ -27,6 +30,9 @@ router.get("/", async (req, res) => {
   }
 });
 
+// =====================================================
+// GET /api/contents/nearby
+// =====================================================
 router.get("/nearby", async (req, res) => {
   try {
     const { lat, lng, radius = 5000 } = req.query;
@@ -41,7 +47,20 @@ router.get("/nearby", async (req, res) => {
       });
     }
 
-    const result = await db.query("SELECT * FROM public.contents");
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ error: "Latitudine non valida" });
+    }
+
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: "Longitudine non valida" });
+    }
+
+    if (radiusMeters <= 0) {
+      return res.status(400).json({ error: "Il raggio deve essere maggiore di zero" });
+    }
+
+    // Recuperiamo tutti i contenuti e filtriamo in JavaScript (come prima)
+    const result = await db.query("SELECT * FROM contents");
     const contents = result.rows;
     const earthRadius = 6371000;
 
@@ -77,6 +96,9 @@ router.get("/nearby", async (req, res) => {
   }
 });
 
+// =====================================================
+// GET /api/contents/:id
+// =====================================================
 router.get("/:id", async (req, res) => {
   try {
     const result = await db.query(
@@ -95,6 +117,9 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// =====================================================
+// POST /api/contents
+// =====================================================
 router.post("/", async (req, res) => {
   try {
     const {
@@ -134,6 +159,14 @@ router.post("/", async (req, res) => {
       return res.status(400).json({
         error: "latitude e longitude devono essere numeri"
       });
+    }
+
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ error: "Latitudine non valida" });
+    }
+
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: "Longitudine non valida" });
     }
 
     const result = await db.query(`
