@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
              heading, accuracy, anchor_type, scale,
              rotation_x, rotation_y, rotation_z, anchor_data,
              created_at, updated_at
-      FROM contents
+      FROM public.contents
       ORDER BY created_at DESC
     `);
     res.json(result.rows);
@@ -41,7 +41,7 @@ router.get("/nearby", async (req, res) => {
       });
     }
 
-    const result = await db.query("SELECT * FROM contents");
+    const result = await db.query("SELECT * FROM public.contents");
     const contents = result.rows;
     const earthRadius = 6371000;
 
