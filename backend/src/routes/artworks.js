@@ -3,6 +3,7 @@ const db = require("../db/database");
 
 const router = express.Router();
 
+// GET /api/artworks
 router.get("/", async (req, res) => {
   try {
     const result = await db.query(
@@ -15,6 +16,7 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/artworks/nearby
 router.get("/nearby", async (req, res) => {
   try {
     const { lat, lng, radius = 1000 } = req.query;
@@ -71,6 +73,7 @@ router.get("/nearby", async (req, res) => {
   }
 });
 
+// GET /api/artworks/:id
 router.get("/:id", async (req, res) => {
   try {
     const result = await db.query(
@@ -89,6 +92,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// POST /api/artworks
 router.post("/", async (req, res) => {
   try {
     const { name, description, latitude, longitude, altitude, model_url } = req.body;
